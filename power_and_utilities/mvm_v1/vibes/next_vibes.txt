@@ -1,0 +1,160 @@
+**Model Quality Score: 63/100**
+
+**Static Analysis Findings (29 actionable):**
+  - [SA:unlinked_fk] Column distribution.distribution_outage_event.crew_dispatch_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.zone.feeder_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.zone.service_territory_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.zone.substation_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.service_area.franchise_agreement_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.service_area.operating_district_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.service_area.service_territory_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.district.region_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.district.service_territory_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.network_model.substation_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.service_territory.operating_company_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column distribution.service_territory.region_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column finance.organization.budget_owner_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column finance.organization.legal_entity_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column finance.organization.manager_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column finance.organization.parent_organization_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column regulatory.violation.asset_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column regulatory.violation.facility_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column regulatory.violation.mitigation_plan_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column regulatory.violation.responsible_employee_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column workforce.department.business_unit_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column workforce.department.location_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column workforce.department.manager_employee_id looks like an FK but has no foreign_key_to reference
+  - [SA:unlinked_fk] Column workforce.department.parent_department_id looks like an FK but has no foreign_key_to reference
+  - [SA:missing_pk] Product 'transmission.bus' has no primary key attribute.
+  - [SA:cross_domain_duplicate] Potential SSOT violation: 'billing.billing_service_agreement' and 'customer.customer_service_agreement' have the same entity name 'service_agreement' in different domains. One should be the SSOT owner, the other should reference via FK.
+  - [SA:cross_domain_duplicate] Potential SSOT violation: 'distribution.distribution_substation' and 'transmission.transmission_substation' have the same entity name 'substation' in different domains. One should be the SSOT owner, the other should reference via FK.
+  - [SA:cross_domain_duplicate] Potential SSOT violation: 'distribution.distribution_outage_event' and 'generation.generation_outage_event' have the same entity name 'outage_event' in different domains. One should be the SSOT owner, the other should reference via FK.
+  - [SA:cross_domain_duplicate] Potential SSOT violation: 'distribution.zone' and 'market.market_zone' have the same entity name 'zone' in different domains. One should be the SSOT owner, the other should reference via FK.
+
+**PRIORITY 1 — connect_table: workforce.department** — add column parent_department_id (BIGINT) with FK to workforce.department.department_id — departments have hierarchical structures; this table is ISOLATED with zero inbound and zero outbound FKs, making it completely disconnected from the graph
+**PRIORITY 2 — connect_table: finance.organization** — add column parent_organization_id (BIGINT) with FK to finance.organization.organization_id — organization is ISOLATED with only one inbound FK from wbs_element and no outbound FKs; needs self-referential hierarchy for corporate structure
+**PRIORITY 3 — connect_table: regulatory.docket** — add column jurisdiction_regulatory_body_id (BIGINT) with FK to regulatory.commission_order.commission_order_id — docket is a reference table with zero outbound FKs but should at minimum link to the regulatory body or commission that owns it; however as a pure reference table with many inbound FKs this is acceptable — RETRACTED
+**PRIORITY 4 — connect_table: regulatory.violation** — add column compliance_obligation_id (BIGINT) with FK to regulatory.compliance_obligation.compliance_obligation_id — violations must trace to the specific compliance obligation that was violated; currently only has a self-ref
+**PRIORITY 5 — connect_table: regulatory.violation** — add column docket_id (BIGINT) with FK to regulatory.docket.docket_id — violations are tracked under regulatory dockets and need this linkage for enforcement tracking
+**PRIORITY 6 — connect_table: billing.collections_action** — add column account_id (BIGINT) with FK to customer.account.account_id — collections actions only self-reference and have one inbound from collections_case; they must link to the customer account being collected upon
+**PRIORITY 7 — connect_table: billing.collections_action** — add column collections_case_id (BIGINT) with FK to billing.collections_case.collections_case_id — a collections action must belong to a collections case; currently only referenced inbound by payment_arrangement
+**PRIORITY 8 — connect_table: market.participant_registration** — add column rto_iso_id (BIGINT) with FK to market.rto_iso.rto_iso_id — market participant registrations are filed with a specific RTO/ISO; this table has zero outbound FKs despite being a core market entity
+**PRIORITY 9 — connect_table: market.participant_registration** — add column party_id (BIGINT) with FK to customer.party.party_id — participant registrations represent a legal entity registering in a market and should link to the party domain
+**PRIORITY 10 — connect_table: transmission.contingency_scenario** — add column control_area_id (BIGINT) with FK to transmission.control_area.control_area_id — contingency scenarios are defined within a control area; currently only has a self-ref with no outbound domain connections
+**PRIORITY 11 — connect_table: distribution.district** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — districts exist within service territories; currently only has a self-ref and is disconnected from the geographic hierarchy
+**PRIORITY 12 — connect_table: distribution.service_area** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — service areas should nest within service territories for geographic hierarchy consistency
+**PRIORITY 13 — connect_table: distribution.network_model** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — network models represent a specific geographic scope and should link to the territory they cover
+**PRIORITY 14 — connect_table: distribution.service_territory** — add column regulatory_jurisdiction_docket_id (BIGINT) with FK to regulatory.docket.docket_id — service territories are defined by regulatory jurisdictions and should trace to the authorizing docket
+**PRIORITY 15 — rename_attribute: finance.depreciation_study** — rename column prior_study_id to prior_depreciation_study_id because there are two columns (prior_study_id and prior_depreciation_study_id) that appear to be duplicates referencing the same self-referential relationship; if they are truly separate, prior_study_id is ambiguous and needs a business-qualified name
+**PRIORITY 16 — rename_attribute: market.market_zone** — rename column parent_zone_id to parent_market_zone_id because there are two self-ref columns (parent_zone_id and parent_market_zone_id) that appear duplicative; parent_zone_id is ambiguous and conflicts with distribution.zone naming
+**PRIORITY 17 — rename_attribute: metering.tou_schedule** — rename column superseded_by_schedule_id to superseded_by_tou_schedule_id because there are two columns (superseded_by_schedule_id and superseded_tou_schedule_id) that appear duplicative; the name should be consistent and unambiguous
+**PRIORITY 18 — rename_attribute: metering.vee_rule_set** — rename column parent_rule_set_id to parent_vee_rule_set_id because there are two columns (parent_rule_set_id and parent_vee_rule_set_id) that appear duplicative; the generic name is ambiguous
+**PRIORITY 19 — rename_attribute: regulatory.tariff_schedule** — rename column superseded_by_tariff_tariff_schedule_id to superseded_by_tariff_schedule_id because the double "tariff_tariff" is a naming error
+**PRIORITY 20 — rename_attribute: regulatory.rider_charge** — rename column superseded_by_rider_rider_charge_id to superseded_by_rider_charge_id because the double "rider_rider" is a naming error
+**PRIORITY 21 — connect_table: transmission.balancing_authority** — add column control_area_id (BIGINT) with FK to transmission.control_area.control_area_id — balancing authorities operate within control areas; currently only has a self-ref outbound
+**PRIORITY 22 — connect_table: transmission.control_area** — add column rto_iso_id (BIGINT) with FK to market.rto_iso.rto_iso_id — control areas operate under RTO/ISO oversight; this is a critical cross-domain link missing between transmission and market
+**PRIORITY 23 — connect_table: distribution.zone** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — zones should nest within service territories for geographic hierarchy; currently only has a self-ref
+**PRIORITY 24 — connect_table: supply.vendor** — add column party_id (BIGINT) with FK to customer.party.party_id — vendors are legal entities and should link to the enterprise party master for unified entity management
+**PRIORITY 25 — connect_table: workforce.employee** — add column department_id (BIGINT) with FK to workforce.department.department_id — employees belong to departments; this FK is missing and would connect the currently isolated department table
+**PRIORITY 26 — connect_table: finance.gl_account** — add column gl_account_group_id (BIGINT) with FK to finance.gl_account.gl_account_id — GL accounts typically have a chart-of-accounts hierarchy; this table is a reference table with zero outbound FKs which is acceptable, but a self-referential parent would improve reporting — RETRACTED as reference table is valid
+**PRIORITY 27 — remove_fk: asset.failure_event** — remove FK on column linking to market.ppa_contract because asset failures do not logically originate from PPA contracts; failure events relate to physical assets, not commercial agreements
+**PRIORITY 28 — remove_fk: metering.daily_usage_summary** — remove FK on column linking to market.ppa_contract because daily usage summaries are meter-level consumption aggregations and should not directly reference wholesale PPA contracts
+**PRIORITY 29 — remove_fk: metering.interval_read** — remove FK on column linking to market.ppa_contract because raw interval reads are physical meter data and should not directly reference wholesale PPA contracts
+**PRIORITY 30 — connect_table: asset.master** — add column facility_id (BIGINT) with FK to asset.facility.facility_id — assets are housed in facilities; the facility table references asset.master but there is no reverse lookup from master to facility for direct facility assignment
+**PRIORITY 31 — connect_table: billing.invoice** — add column billing_service_agreement_id (BIGINT) with FK to billing.billing_service_agreement.billing_service_agreement_id — invoices should trace to the service agreement that governs billing terms; currently invoice links to customer_service_agreement but not billing_service_agreement
+**PRIORITY 32 — connect_table: generation.generation_outage_event** — add column plant_id (BIGINT) with FK to generation.plant.plant_id — generation outage events should link to the plant where the outage occurred, not just the generating unit
+**PRIORITY 33 — connect_table: generation.generation_outage_event** — add column work_order_id (BIGINT) with FK to asset.work_order.work_order_id — generation outage events require maintenance work orders for restoration, similar to distribution outage events
+**PRIORITY 34 — connect_table: distribution.switching_operation** — add column operator_id (BIGINT) with FK to workforce.employee.employee_id — switching operations must be performed by a qualified operator for safety and compliance tracking
+**PRIORITY 35 — connect_table: transmission.line** — add column operator_id (BIGINT) with FK to transmission.operator.operator_id — transmission lines are operated by a transmission operator and need this linkage for OATT compliance
+**PRIORITY 36 — connect_table: distribution.protective_device** — add column asset_master_id (BIGINT) with FK to asset.master.asset_master_id — protective devices are physical assets and should link to the enterprise asset master for lifecycle management
+**PRIORITY 37 — connect_table: distribution.bus** — add column asset_master_id (BIGINT) with FK to asset.master.asset_master_id — distribution buses are physical assets and should link to the enterprise asset master
+**PRIORITY 38 — connect_table: transmission.bus** — add column asset_master_id (BIGINT) with FK to asset.master.asset_master_id — transmission buses are physical assets and should link to the enterprise asset master
+**PRIORITY 39 — connect_table: distribution.demand_response_event** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — demand response events are dispatched within a service territory
+**PRIORITY 40 — connect_table: distribution.demand_response_event** — add column market_demand_response_program_id (BIGINT) with FK to market.demand_response_program.demand_response_program_id — distribution DR events should link to the market DR program they fulfill
+**PRIORITY 41 — connect_table: customer.segment** — add column cost_center_id (BIGINT) with FK to finance.cost_center.cost_center_id — customer segments drive cost allocation and should link to finance for segment-level profitability analysis; currently segment only has one inbound FK from party
+**PRIORITY 42 — connect_table: distribution.reliability_index** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — SAIDI/SAIFI/CAIDI indices are reported at the service territory level for regulatory filings
+**PRIORITY 43 — connect_table: metering.meter_test** — add column vendor_id (BIGINT) with FK to supply.vendor.vendor_id — meter tests may be performed by third-party testing vendors and should track the testing entity
+**PRIORITY 44 — connect_table: generation.emissions_record** — add column regulatory_compliance_obligation_id (BIGINT) with FK to regulatory.compliance_obligation.compliance_obligation_id — emissions records must trace to the specific regulatory compliance obligation (EPA, state) they satisfy
+**PRIORITY 45 — connect_table: generation.environmental_permit** — add column compliance_obligation_id (BIGINT) with FK to regulatory.compliance_obligation.compliance_obligation_id — environmental permits are issued under specific compliance obligations
+**PRIORITY 46 — connect_table: distribution.city_gate_station** — add column asset_master_id (BIGINT) with FK to asset.master.asset_master_id — city gate stations are major physical assets and should link to the enterprise asset master for lifecycle tracking
+**PRIORITY 47 — connect_table: distribution.voltage_regulation_device** — add column asset_master_id (BIGINT) with FK to asset.master.asset_master_id — voltage regulation devices are physical assets requiring lifecycle management through the asset master
+**PRIORITY 48 — connect_table: customer.credit_deposit** — add column billing_service_agreement_id (BIGINT) with FK to billing.billing_service_agreement.billing_service_agreement_id — credit deposits are held against a billing service agreement and should link directly
+**PRIORITY 49 — rename_product: asset.master** — rename to asset_master because "master" alone is ambiguous and does not convey the asset context when referenced cross-domain
+**PRIORITY 50 — connect_table: transmission.tariff_rate** — add column rto_iso_id (BIGINT) with FK to market.rto_iso.rto_iso_id — transmission tariff rates are filed with and governed by the RTO/ISO
+**PRIORITY 51 — connect_table: finance.capex_project** — add column profit_center_id (BIGINT) with FK to finance.profit_center.profit_center_id — capital projects should link to profit centers for investment return tracking and financial reporting
+**PRIORITY 52 — connect_table: asset.work_order** — add column vendor_id (BIGINT) with FK to supply.vendor.vendor_id — work orders frequently involve external contractors/vendors and should track the assigned vendor
+**PRIORITY 53 — connect_table: distribution.gas_leak_survey** — add column gas_service_lateral_id (BIGINT) with FK to distribution.gas_service_lateral.gas_service_lateral_id — gas leak surveys inspect service laterals in addition to mains and should link to both
+**PRIORITY 54 — connect_table: market.lmp_price** — add column rto_iso_id (BIGINT) with FK to market.rto_iso.rto_iso_id — LMP prices are published by a specific RTO/ISO and must trace to the publishing market operator
+**PRIORITY 55 — connect_table: distribution.load_profile** — add column service_territory_id (BIGINT) with FK to distribution.service_territory.service_territory_id — load profiles are developed for specific service territories for planning purposes
+**PRIORITY 56 — connect_table: customer.account_hierarchy** — add column parent_account_id (BIGINT) with FK to customer.account.account_id — account hierarchy should explicitly model the parent-child relationship with a separate parent account FK, not just reference the child account
+**PRIORITY 57 — connect_table: generation.fuel_inventory** — add column warehouse_id (BIGINT) with FK to supply.warehouse.warehouse_id — fuel inventory is stored at specific warehouse/storage locations and should link to the supply warehouse for inventory reconciliation; currently only links to plant and fuel_contract
+**PRIORITY 58 — connect_table: transmission.protection_system** — add column transmission_substation_id (BIGINT) with FK to transmission.transmission_substation.transmission_substation_id — this FK already exists per the listing; RETRACTED
+**PRIORITY 59 — connect_table: distribution.der_dispatch** — add column service_point_id (BIGINT) with FK to distribution.service_point.service_point_id — DER dispatches deliver energy at a specific service point and should link directly for settlement and measurement
+**PRIORITY 60 — connect_table: billing.bill_cycle** — add column financial_period_id (BIGINT) with FK to finance.financial_period.financial_period_id — bill cycles must align with financial periods for revenue recognition and GAAP reporting
+**PRIORITY 61 — connect_table: asset.condition** — add column work_order_id (BIGINT) with FK to asset.work_order.work_order_id — condition assessments often result from or trigger work orders and should link for maintenance workflow continuity
+**PRIORITY 62 — connect_table: workforce.department** — add column cost_center_id (BIGINT) with FK to finance.cost_center.cost_center_id — departments map to cost centers for labor cost allocation and financial reporting
+**PRIORITY 63 — connect_table: finance.organization** — add column cost_center_id (BIGINT) with FK to finance.cost_center.cost_center_id — organizations own cost centers and this linkage supports organizational financial reporting
+**PRIORITY 64 — connect_table: distribution.service_point_dr_participation** — add column customer_account_id (BIGINT) with FK to customer.account.account_id — DR participation records should link to the customer account for enrollment verification and settlement
+**PRIORITY 65 — connect_table: supply.inventory_stock** — add column cost_center_id (BIGINT) with FK to finance.cost_center.cost_center_id — inventory stock carries financial value and should link to cost centers for inventory valuation reporting
+**PRIORITY 66 — connect_table: metering.ami_endpoint** — add column vendor_id (BIGINT) with FK to supply.vendor.vendor_id — AMI endpoints are manufactured and maintained by specific vendors; tracking vendor is critical for firmware management and recalls
+**PRIORITY 67 — connect_table: supply.stock_transfer** — add column cost_center_id (BIGINT) with FK to finance.cost_center.cost_center_id — stock transfers move inventory value between cost centers and need this linkage for financial tracking
+**PRIORITY 68 — connect_table: generation.capacity_resource** — add column compliance_obligation_id (BIGINT) with FK to regulatory.compliance_obligation.compliance_obligation_id — capacity resources are committed under regulatory obligations for resource adequacy
+**PRIORITY 69 — connect_table: distribution.der_interconnection** — add column compliance_obligation_id (BIGINT) with FK to regulatory.compliance_obligation.compliance_obligation_id — DER interconnections must comply with specific regulatory obligations (IEEE 1547, state interconnection rules)
+**PRIORITY 70 — connect_table: customer.move_order** — add column billing_service_agreement_id (BIGINT) with FK to billing.billing_service_agreement.billing_service_agreement_id — move orders trigger start/stop of billing service agreements and should link directly
+**PRIORITY 71 — connect_table: transmission.outage** — add column operator_id (BIGINT) with FK to transmission.operator.operator_id — transmission outages are managed by the transmission operator and need this linkage for coordination tracking
+**PRIORITY 72 — connect_table: distribution.crew_dispatch** — add column employee_id (BIGINT) with FK to workforce.employee.employee_id — crew dispatches should link to the lead employee/crew supervisor for workforce management
+
+Other known issues from static analysis (51):
+  - Attribute 'facility_subtype' in asset.facility has redundant product prefix 'facility_'. Rename to 'subtype'
+  - Attribute 'crew_classification' in transmission.crew has redundant product prefix 'crew_'. Rename to 'classification'
+  - Attribute 'crew_lead_contact' in transmission.crew has redundant product prefix 'crew_'. Rename to 'lead_contact'
+  - Attribute 'crew_lead_name' in transmission.crew has redundant product prefix 'crew_'. Rename to 'lead_name'
+  - Attribute 'crew_size' in transmission.crew has redundant product prefix 'crew_'. Rename to 'size'
+  - Attribute 'zone_classification' in distribution.zone has redundant product prefix 'zone_'. Rename to 'classification'
+  - Attribute 'district_manager_name' in distribution.district has redundant product prefix 'district_'. Rename to 'manager_name'
+  - Attribute 'district_office_address' in distribution.district has redundant product prefix 'district_'. Rename to 'office_address'
+  - Attribute 'district_office_phone' in distribution.district has redundant product prefix 'district_'. Rename to 'office_phone'
+  - Attribute 'organization_short_name' in finance.organization has redundant product prefix 'organization_'. Rename to 'short_name'
+  - Table transmission.bus declares PK 'bus_id' but no matching attribute exists in the attributes list
+  - Table market.pricing_node has self-referencing FK on column 'hub_node_id' with same name as PK 'pricing_node_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table transmission.protection_system has self-referencing FK on column 'backup_protection_system_id' with same name as PK 'protection_system_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table transmission.control_center has self-referencing FK on column 'backup_control_center_id' with same name as PK 'control_center_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table billing.collections_action has self-referencing FK on column 'associated_collections_action_id' with same name as PK 'collections_action_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table transmission.constrained_element has self-referencing FK on column 'associated_constrained_element_id' with same name as PK 'constrained_element_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table transmission.flowgate has self-referencing FK on column 'associated_flowgate_id' with same name as PK 'flowgate_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table regulatory.violation has self-referencing FK on column 'related_violation_id' with same name as PK 'violation_id' — the FK column must have a different name that describes the relationship (the LLM should choose a contextual label)
+  - Table asset.hierarchy has 2 FK columns pointing to asset.master (child_asset_asset_master_id, master_id) (generic/unlabeled: master_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table customer.interaction has 2 FK columns pointing to customer.party (agent_party_id, party_id) (generic/unlabeled: party_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table distribution.gas_leak_survey has 2 FK columns pointing to asset.work_order (repair_work_order_id, work_order_id) (generic/unlabeled: work_order_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table market.energy_bid has 2 FK columns pointing to generation.generating_unit (generating_unit_id, resource_generating_unit_id) (generic/unlabeled: generating_unit_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table transmission.line has 2 FK columns pointing to transmission.transmission_substation (to_transmission_substation_id, transmission_substation_id) (generic/unlabeled: transmission_substation_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table market.market_zone has 2 FK columns pointing to market.participant_registration (balancing_authority_participant_registration_id, participant_registration_id) (generic/unlabeled: participant_registration_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - Table market.capacity_transfer_agreement has 2 FK columns pointing to market.wholesale_counterparty (transferee_party_wholesale_counterparty_id, wholesale_counterparty_id) (generic/unlabeled: wholesale_counterparty_id) — rename generic columns to describe their business role (e.g., inspector_employee_id, approver_employee_id; origin_plan_id, amendment_plan_id)
+  - PII-candidate attribute asset.inspector.mobile_device_code has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute asset.inspection_crew.gis_mobile_device_ids has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.bus.latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.bus.longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.city_gate_station.latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.city_gate_station.longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.gas_network_node.latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.gas_network_node.longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.crew_dispatch.dispatch_location_latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.crew_dispatch.dispatch_location_longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.crew_dispatch.dispatch_location_postal_code has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.protective_device.latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.protective_device.longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute transmission.constrained_element.geographic_latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute transmission.constrained_element.geographic_longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute transmission.operator.operator_name has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute transmission.bus.latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute transmission.bus.longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.zone.centroid_latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.zone.centroid_longitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.service_area.centroid_latitude has no classification tags — expected restricted/confidential + PII tag
+  - PII-candidate attribute distribution.service_area.centroid_longitude has no classification tags — expected restricted/confidential + PII tag
+  - 4 attribute(s) contain banned boilerplate phrases (Fortune N, multinational, enterprise-wide, cross-company, group reporting). Clean descriptions.
+  - 222 attribute(s) match person-data patterns but lack pii_ tags
+  - 11 non-PK attributes redundantly prefixed with their product name
+  - 1 attribute(s) have value_regex on typed columns (DATE/BOOLEAN/INT/etc.) — regex is redundant when data_type constrains format
+
+Deterministic score: 63/100 (LLM assessment: 62/100)
